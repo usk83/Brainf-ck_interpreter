@@ -1,0 +1,10 @@
+#分からないこと
+
+##なぜ以下のコードの出力が8なのか
+	char *hoge;
+	int num;
+	hoge = (char*) malloc(10);
+	num = sizeof(hoge);
+	printf("%d\n", num);
+
+	>> 8
