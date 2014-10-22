@@ -1,15 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// char sourceLoad();
+char *buffer;
+
+void sourceLoad(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
+	// int i;
+
+	sourceLoad(argc, argv);
+
+	printf("%s", buffer);
+
+	return 0;
+}
+
+void sourceLoad(int argc, char *argv[])
+{
 	FILE *sourcefp;
 	char *fname;
-	int i;
 	long length;
-	char *buffer;
 
 	if(argc == 1)
 	{
@@ -34,13 +45,5 @@ int main(int argc, char *argv[])
 
 	fread(buffer, sizeof(char), length, sourcefp);
 
-	printf("%s", buffer);
-
 	fclose(sourcefp);
-	return 0;
 }
-
-// char sourceLoad()
-// {
-
-// }
