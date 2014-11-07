@@ -5,7 +5,8 @@
 void sourceLoad(int argc, char *argv[]);
 void codeRun(char code);
 
-char *buffer;
+// char *buffer;
+char buffer[2];
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +19,6 @@ int main(int argc, char *argv[])
 	{
 		codeRun(code);
 	}
-	printf("%i", i);
 	puts("");
 	return 0;
 }
@@ -59,9 +59,19 @@ void sourceLoad(int argc, char *argv[])
 	fseek(fp, 0L, SEEK_SET);
 
 	/* ファイル全体を格納するメモリを割り当てる */
-	buffer = (char*) malloc(length);
+	// buffer = (char*) malloc(length);
+	// buffer = (char*) malloc(2);
 
-	fread(buffer, sizeof(char), length, fp);
+	int size;
+
+	size = fread(buffer, sizeof(char), length, fp);
+
+	printf("size:%i\n", size);
+	printf("buffer:%s\n", buffer);
+
+	char s[6];
+	s = "abcde";
+	printf("s:%s\n", s);
 
 	fclose(fp);
 }
