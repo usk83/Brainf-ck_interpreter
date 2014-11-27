@@ -2,33 +2,64 @@
 #include <stdlib.h>
 #include <string.h>
 
-void sourceLoad(int argc, char *argv[]);
-void codeRun(char code);
+#define BUF_LEN 1024
 
-// char *buffer;
-char buffer[2];
+FILE *sourceLoad(int argc, char *argv[], char *buffer);
+void loadMore(FILE *fp, char *_buffer);
+void codeRun(char code);
 
 int main(int argc, char *argv[])
 {
 	int i;
-	char code;
+	FILE *fp;
+	char buffer[BUF_LEN];
 
-	sourceLoad(argc, argv);
+	// ファイルの読み込み
+	fp = sourceLoad(argc, argv, buffer);
 
-	for(i = 0; (code = buffer[i]) != '\0'; i++)
+	while (1)
 	{
-		codeRun(code);
+		for (i=0; buffer[i] != '\0'; i++)
+		{
+			// ソースファイルを一文字ずつ表示できることを確認
+			// printf("buffer[%d]:%c\n", i, buffer[i]);
+			codeRun(buffer[i]);
+		}
+
+		// bufferがいっぱいまで入っていたら追加で読み込み
+		if (i == BUF_LEN-1)
+		{
+			loadMore(fp, buffer); // ファイルを追加で読み込み
+		}
+		// いっぱいまで使っていなかったらファイルの見込みを終了
+		else
+		{
+			fclose(fp);
+			break;
+		}
 	}
-	puts("");
+
+	// puts("");
 	return 0;
 }
 
-void sourceLoad(int argc, char *argv[])
+// 追加でファイルの読み込み
+void loadMore(FILE *fp, char *_buffer)
 {
-	FILE *fp;
-	char *fname;
-	long length;
+	int size;
+	size = fread(_buffer, sizeof(char), BUF_LEN-1, fp);
+	_buffer[size] = '\0';
+}
 
+// ファイルの読み込み（初回時）
+FILE *sourceLoad(int argc, char *argv[], char *_buffer)
+{
+	char *fname;	// ソースファイルの名前
+	FILE *fp;
+	// long length; // ファイルの長さを格納
+	int size;		// freadの戻り値を格納
+
+	// インライン引数がないとき、多いときはエラーとUsageを表示
 	if(argc == 1)
 	{
 		puts("You must input a file name.\nUsage: ./bf <source>");
@@ -40,6 +71,7 @@ void sourceLoad(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	// インライン引数で-h,--helpのときはUsageを表示
 	if(strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
 	{
 		puts("Usage: ./bf <source>");
@@ -47,33 +79,34 @@ void sourceLoad(int argc, char *argv[])
 	}
 
 	fname = argv[1];
-	fp = fopen(fname, "r");
+	fp = fopen(fname, "r"); // 読み込み用にファイルを開く
+	// ファイルが開けなかったらエラーを表示して終了
 	if(fp == NULL)
 	{
 		puts("file not found.");
 		exit(EXIT_FAILURE);
 	}
 
-	fseek(fp, 0, SEEK_END);
-	length = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
+	/* ファイルの長さを計測（無効化）
+	 * ※あまりいいメソッドではなさそう
+	 * ※そもそも必要ないかも */
+	// fseek(fp, 0L, SEEK_END); // ファイルポインタをファイル終点にする
+	// length = ftell(fp); // ファイルポインタの位置を取得し、ファイルの長さを測定
+	// fseek(fp, 0L, SEEK_SET); // ファイルポインタをファイル始点に戻す
 
 	/* ファイル全体を格納するメモリを割り当てる */
 	// buffer = (char*) malloc(length);
 	// buffer = (char*) malloc(2);
 
-	int size;
+	/* ファイルの読み込み
+	 * 一回で1023Byte分読み込み、最後にNULLを挿入 */
+	size = fread(_buffer, sizeof(char), BUF_LEN-1, fp);
+	_buffer[size] = '\0';
+	// fread()の結果確認
+	// printf("size:%d\n", size);
+	// printf("buffer:%s\n", _buffer);
 
-	size = fread(buffer, sizeof(char), length, fp);
-
-	printf("size:%i\n", size);
-	printf("buffer:%s\n", buffer);
-
-	char s[6];
-	s = "abcde";
-	printf("s:%s\n", s);
-
-	fclose(fp);
+	return fp;
 }
 
 void codeRun(char code)
