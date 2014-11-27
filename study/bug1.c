@@ -8,7 +8,6 @@
 FILE *sourceLoad(int argc, char *argv[], char *buffer);
 void loadMore(FILE *fp, char *_buffer);
 void codeRun(char code);
-char checkCode(char code);
 
 int main(int argc, char *argv[])
 {
@@ -111,7 +110,6 @@ FILE *sourceLoad(int argc, char *argv[], char *_buffer)
 	return fp;
 }
 
-// 引数に取った文字に応じて、処理を実行
 void codeRun(char code)
 {
 	static unsigned char memory[MEM_LEN] = {0};
@@ -132,23 +130,20 @@ void codeRun(char code)
 				curmem--;
 				break;
 		case '.':
-				// 表示に問題ない文字は表示
-				if (!checkCode(memory[curmem]))
-				{
 					putchar(memory[curmem]);
-				}
-				// そうでないときはエラーを吐いて終了
-				else
-				{
-					puts("\n[Error]Tryed to display a but character.");
-					exit(EXIT_FAILURE);
-				}
 				break;
 		case ',':
 				printf("\ninput a 1byte character: ");
 				temp = getchar();
-				memory[curmem] = temp;
-				// 二文字目以降があるときは捨てる
+				printf("temp: %d", temp);
+				// if(temp >= 31 && temp <= 127)
+				// {
+					// memory[curmem] = temp;
+				// }
+				// else
+				// {
+				// 	puts("EROOR!");
+				// }
 				if(temp != '\n')
 				{
 					while (getchar() != '\n');
@@ -165,18 +160,3 @@ void codeRun(char code)
 	else if(curmem > MEM_LEN) curmem = 0;
 
 }
-
-// 表示できない制御文字を判定
-char checkCode(char code)
-{
-	// tab、改行、esc、space、文字は表示に問題ない
-	if (code == 9 || code == 10 || code == 27 || code == 32 || (code >= 33 && code <= 126))
-	{
-		return 0;
-	}
-	else
-	{
-		return -1;
-	}
-}
-
