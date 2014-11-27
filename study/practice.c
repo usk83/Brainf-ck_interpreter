@@ -5,6 +5,8 @@
 #define BUF_LEN 1024
 #define MEM_LEN 30000
 
+typedef unsigned char BYTE;
+
 FILE *sourceLoad(int argc, char *argv[], char *buffer);
 void loadMore(FILE *fp, char *_buffer);
 void codeRun(char code);
@@ -114,7 +116,7 @@ FILE *sourceLoad(int argc, char *argv[], char *_buffer)
 // 引数に取った文字に応じて、処理を実行
 void codeRun(char code)
 {
-	static unsigned char memory[MEM_LEN] = {0};
+	static BYTE memory[MEM_LEN] = {0};
 	static short curmem = 0;
 	char temp;
 	switch(code)
@@ -137,11 +139,16 @@ void codeRun(char code)
 				{
 					putchar(memory[curmem]);
 				}
-				// そうでないときはエラーを吐いて終了
+				// // そうでないときはエラーを吐いて終了
+				// else
+				// {
+				// 	puts("\n[Error]Tryed to display a but character.");
+				// 	exit(EXIT_FAILURE);
+				// }
+				// よりもこっちのほうがいい？
 				else
 				{
-					puts("\n[Error]Tryed to display a but character.");
-					exit(EXIT_FAILURE);
+					printf("□");
 				}
 				break;
 		case ',':
