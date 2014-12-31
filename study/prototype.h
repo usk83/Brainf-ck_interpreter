@@ -17,13 +17,14 @@ typedef struct memory
 	struct memory* prev;
 } MEMORY;
 
-enum OP {NEXT, PREV};
+typedef enum {PLUS, MINUS, NEXT, PREV, INPUT, OUTPUT, LOOP_START, LOOP_END, ERROR} bf_Operator;
 
-void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[]);
+char* source_load(FILE **fp, char *buffer, int length, int argc, char *argv[]);
 void my_strerror(short errcode, const char *com, const char *option);
 void usage(const char *com);
 void checkopt(int argc, char *argv[]);
-void code_run(char code);
+bf_Operator code_run(char *buffer, int *index);
 void memory_init(MEMORY *bf_memory);
-MEMORY *memory_new(MEMORY *bf_memory, enum OP op);
+MEMORY *memory_new(MEMORY *bf_memory, bf_Operator op);
 bool code_check(char code);
+int code_run_loop(char *buffer, int index);

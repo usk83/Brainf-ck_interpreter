@@ -6,13 +6,18 @@ int main(int argc, char *argv[])
 	char buffer[BUF_LEN];
 	int i;
 
-	source_load(&fp, buffer, sizeof(buffer), argc, argv);
+	const char *source = source_load(&fp, buffer, sizeof(buffer), argc, argv);
 
 	while (1)
 	{
 		for (i=0; buffer[i] != '\0'; i++)
 		{
-			code_run(buffer[i]);
+			if (code_run(buffer, &i) == ERROR)
+			{
+				puts("");
+				my_strerror(91, source, NULL);
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		// fpが終端に達していなければ追加で読み込み
@@ -35,10 +40,11 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-void code_run(char code)
+bf_Operator code_run(char *buffer, int *index)
 {
 	static MEMORY *bf_memory;
 	static short header;
+	static int loop = 0;
 	char input;
 	if (bf_memory == NULL)
 	{
@@ -46,13 +52,15 @@ void code_run(char code)
 		header = sizeof(bf_memory->cell)/2;
 		memory_init(bf_memory);
 	}
-	switch(code)
+	switch(buffer[*index])
 	{
 		case '+':
 			bf_memory->cell[header]++;
+			return PLUS;
 			break;
 		case '-':
 			bf_memory->cell[header]--;
+			return MINUS;
 			break;
 		case '>':
 			if (header == 29)
@@ -66,6 +74,8 @@ void code_run(char code)
 			}
 			else
 				header++;
+
+			return NEXT;
 			break;
 		case '<':
 			if (header == 0)
@@ -79,6 +89,18 @@ void code_run(char code)
 			}
 			else
 				header--;
+
+			return PREV;
+			break;
+		case ',':
+			printf("\ninput a 1byte character: ");
+			input = getchar();
+			bf_memory->cell[header] = input;
+			// 二文字目以降があるときは捨てる
+			if(input != '\n')
+				while (getchar() != '\n');
+
+			return INPUT;
 			break;
 		case '.':
 			// 表示に問題ない文字は表示
@@ -88,19 +110,38 @@ void code_run(char code)
 			// そうでないときは四角を表示
 			else
 				printf("□");
-			break;
-		case ',':
-			printf("\ninput a 1byte character: ");
-			input = getchar();
-			bf_memory->cell[header] = input;
-			// 二文字目以降があるときは捨てる
-			if(input != '\n')
-				while (getchar() != '\n');
+
+			return OUTPUT;
 			break;
 		case '[':
+			loop++;
+			// while (bf_memory->cell[header])
+			// {
+			// 	*index = code_run_loop(buffer, index);
+			// }
+			return LOOP_START;
 			break;
 		case ']':
+			if (!loop)
+			{
+				return ERROR;
+			}
+			loop--;
+			return LOOP_END;
 			break;
+	}
+	return ERROR;
+}
+
+int code_run_loop(char *buffer, int index)
+{
+	while (1)
+	{
+		index++;
+		if (code_run(buffer, &index) == LOOP_END)
+		{
+			return index;
+		}
 	}
 }
 
@@ -118,7 +159,7 @@ bool code_check(char code)
 	}
 }
 
-MEMORY *memory_new(MEMORY *bf_memory, enum OP op)
+MEMORY *memory_new(MEMORY *bf_memory, bf_Operator op)
 {
 	if (op == NEXT)
 	{
@@ -145,7 +186,7 @@ void memory_init(MEMORY *bf_memory)
 	}
 }
 
-void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[])
+char* source_load(FILE **fp, char *buffer, int length, int argc, char *argv[])
 {
 	int size; // freadの戻り値を格納
 	if (*fp == NULL)
@@ -190,6 +231,7 @@ void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	buffer[size] = '\0';
+	return argv[optind];
 }
 
 void my_strerror(short errcode, const char *com, const char *option)
@@ -225,6 +267,10 @@ void my_strerror(short errcode, const char *com, const char *option)
 			break;
 		case 13:
 			fprintf(stderr, "missing source filename.\n\n");
+			break;
+		// 90~: source error
+		case 91:
+			fprintf(stderr, "no operator '[' corresponding to ']'.\n\n");
 			break;
 		// 100~: option warning
 		case 101:

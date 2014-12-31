@@ -92,8 +92,8 @@ static const char recargchar[] = "option requires an argument -- %c";
 static const char recargstring[] = "option requires an argument -- %s";
 static const char ambig[] = "ambiguous option -- %.*s";
 static const char noarg[] = "option doesn't take an argument -- %.*s";
-static const char illoptchar[] = "unknown option -- %c";
-static const char illoptstring[] = "unknown option -- %s";
+// static const char illoptchar[] = "unknown option -- %c";
+// static const char illoptstring[] = "unknown option -- %s";
 
 /* static int gcd(int, int); */
 /* Compute the greatest common divisor of a and b.*/
