@@ -1,20 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "getopt_long/my_getopt.h"
 #include "prototype.h"
-
-#define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
-#define BUF_LEN 1024
-
-typedef unsigned char BYTE;
-
-typedef struct memory
-{
-	BYTE value = 0;
-	struct memory* next;
-	struct memory* prev;
-} MEMORY;
 
 int main(int argc, char *argv[])
 {
@@ -29,8 +13,8 @@ int main(int argc, char *argv[])
 		for (i=0; buffer[i] != '\0'; i++)
 		{
 			// ソースファイルを一文字ずつ表示できることを確認
-			printf("buffer[%d]:%c\n", i, buffer[i]);
-			// code_run(buffer[i]);
+			// printf("buffer[%d]:%c\n", i, buffer[i]);
+			code_run(buffer[i]);
 		}
 
 		// fpが終端に達していなければ追加で読み込み
@@ -55,8 +39,108 @@ int main(int argc, char *argv[])
 
 void code_run(char code)
 {
-	static MEMORY *header = (MEMORY*) malloc(sizeof(MEMORY));
-	// switch分コピーから再開
+	static MEMORY *bf_memory;
+	static short header;
+	if (bf_memory == NULL)
+	{
+		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
+		header = sizeof(bf_memory->cell)/2;
+		memory_init(bf_memory);
+	}
+	switch(code)
+	{
+		case '+':
+			bf_memory->cell[header]++;
+			break;
+		case '-':
+			bf_memory->cell[header]--;
+			break;
+		case '>':
+			if (header == 29)
+			{
+				// 次がなかったら作成
+				if (bf_memory->next == NULL)
+					bf_memory = memory_new(bf_memory, NEXT);
+				else
+					bf_memory = bf_memory->next;
+				header = 0;
+			}
+			else
+				header++;
+			break;
+		case '<':
+			if (header == 0)
+			{
+				// 前がなかったら作成
+				if (bf_memory->prev == NULL)
+					bf_memory = memory_new(bf_memory, PREV);
+				else
+					bf_memory = bf_memory->prev;
+				header = 29;
+			}
+			else
+				header--;
+			break;
+		// case '.':
+		// 	// 表示に問題ない文字は表示
+		// 	if (!checkCode(memory[curmem]))
+		// 	{
+		// 		putchar(memory[curmem]);
+		// 	}
+		// 	// // そうでないときはエラーを吐いて終了
+		// 	// else
+		// 	// {
+		// 	// 	puts("\n[Error]Tryed to display a but character.");
+		// 	// 	exit(EXIT_FAILURE);
+		// 	// }
+		// 	// よりもこっちのほうがいい？
+		// 	else
+		// 	{
+		// 		printf("□");
+		// 	}
+		// 	break;
+		// case ',':
+		// 	printf("\ninput a 1byte character: ");
+		// 	temp = getchar();
+		// 	memory[curmem] = temp;
+		// 	// 二文字目以降があるときは捨てる
+		// 	if(temp != '\n')
+		// 	{
+		// 		while (getchar() != '\n');
+		// 	}
+		// 	break;
+		case '[':
+			break;
+		case ']':
+			break;
+	}
+}
+
+MEMORY *memory_new(MEMORY *bf_memory, enum OP op)
+{
+	if (op == NEXT)
+	{
+		bf_memory->next = (MEMORY*) malloc(sizeof(MEMORY));
+		bf_memory->next->prev = bf_memory;
+		bf_memory = bf_memory->next;
+	}
+	else if (op == PREV)
+	{
+		bf_memory->prev = (MEMORY*) malloc(sizeof(MEMORY));
+		bf_memory->prev->next = bf_memory;
+		bf_memory = bf_memory->prev;
+	}
+	memory_init(bf_memory);
+	return bf_memory;
+}
+
+void memory_init(MEMORY *bf_memory)
+{
+	int i;
+	for (i=0; i<sizeof(bf_memory->cell); i++)
+	{
+		bf_memory->cell[i] = 0;
+	}
 }
 
 void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[])
