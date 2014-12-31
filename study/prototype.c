@@ -7,6 +7,15 @@
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 #define BUF_LEN 1024
 
+typedef unsigned char BYTE;
+
+typedef struct memory
+{
+	BYTE value = 0;
+	struct memory* next;
+	struct memory* prev;
+} MEMORY;
+
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
@@ -21,7 +30,7 @@ int main(int argc, char *argv[])
 		{
 			// ソースファイルを一文字ずつ表示できることを確認
 			printf("buffer[%d]:%c\n", i, buffer[i]);
-			// codeRun(buffer[i]);
+			// code_run(buffer[i]);
 		}
 
 		// fpが終端に達していなければ追加で読み込み
@@ -42,6 +51,12 @@ int main(int argc, char *argv[])
 	}
 
 	return EXIT_SUCCESS;
+}
+
+void code_run(char code)
+{
+	static MEMORY *header = (MEMORY*) malloc(sizeof(MEMORY));
+	// switch分コピーから再開
 }
 
 void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[])
