@@ -12,8 +12,6 @@ int main(int argc, char *argv[])
 	{
 		for (i=0; buffer[i] != '\0'; i++)
 		{
-			// ソースファイルを一文字ずつ表示できることを確認
-			// printf("buffer[%d]:%c\n", i, buffer[i]);
 			code_run(buffer[i]);
 		}
 
