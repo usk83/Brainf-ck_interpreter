@@ -41,6 +41,7 @@ void code_run(char code)
 {
 	static MEMORY *bf_memory;
 	static short header;
+	char input;
 	if (bf_memory == NULL)
 	{
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
@@ -81,38 +82,41 @@ void code_run(char code)
 			else
 				header--;
 			break;
-		// case '.':
-		// 	// 表示に問題ない文字は表示
-		// 	if (!checkCode(memory[curmem]))
-		// 	{
-		// 		putchar(memory[curmem]);
-		// 	}
-		// 	// // そうでないときはエラーを吐いて終了
-		// 	// else
-		// 	// {
-		// 	// 	puts("\n[Error]Tryed to display a but character.");
-		// 	// 	exit(EXIT_FAILURE);
-		// 	// }
-		// 	// よりもこっちのほうがいい？
-		// 	else
-		// 	{
-		// 		printf("□");
-		// 	}
-		// 	break;
-		// case ',':
-		// 	printf("\ninput a 1byte character: ");
-		// 	temp = getchar();
-		// 	memory[curmem] = temp;
-		// 	// 二文字目以降があるときは捨てる
-		// 	if(temp != '\n')
-		// 	{
-		// 		while (getchar() != '\n');
-		// 	}
-		// 	break;
+		case '.':
+			// 表示に問題ない文字は表示
+			if (code_check(bf_memory->cell[header]))
+				putchar(bf_memory->cell[header]);
+
+			// そうでないときは四角を表示
+			else
+				printf("□");
+			break;
+		case ',':
+			printf("\ninput a 1byte character: ");
+			input = getchar();
+			bf_memory->cell[header] = input;
+			// 二文字目以降があるときは捨てる
+			if(input != '\n')
+				while (getchar() != '\n');
+			break;
 		case '[':
 			break;
 		case ']':
 			break;
+	}
+}
+
+// 表示できない制御文字を判定
+bool code_check(char code)
+{
+	// tab、改行、esc、space、文字は表示に問題ない
+	if (code == 9 || code == 10 || code == 27 || code == 32 || (code >= 33 && code <= 126))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 

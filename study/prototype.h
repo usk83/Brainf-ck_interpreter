@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "getopt_long/my_getopt.h"
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
@@ -25,3 +26,4 @@ void checkopt(int argc, char *argv[]);
 void code_run(char code);
 void memory_init(MEMORY *bf_memory);
 MEMORY *memory_new(MEMORY *bf_memory, enum OP op);
+bool code_check(char code);
