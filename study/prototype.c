@@ -1,5 +1,8 @@
 #include "prototype.h"
 
+#define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
+#define BUF_LEN 256
+
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
@@ -40,12 +43,13 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
-bf_Operator code_run(char *buffer, int *index)
+BF_OPERATOR code_run(char *buffer, int *index)
 {
 	static MEMORY *bf_memory;
 	static short header;
 	static int loop = 0;
 	char input;
+	int start;
 	if (bf_memory == NULL)
 	{
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
@@ -114,11 +118,14 @@ bf_Operator code_run(char *buffer, int *index)
 			return OUTPUT;
 			break;
 		case '[':
-			loop++;
-			// while (bf_memory->cell[header])
-			// {
-			// 	*index = code_run_loop(buffer, index);
-			// }
+			start = *index;
+			while (bf_memory->cell[header])
+			{
+				loop++;
+				// printf("start:cell[header]=%d\n", bf_memory->cell[header]);
+				*index = code_run_loop(buffer, start);
+				// printf("\nend:cell[header]=%d\n", bf_memory->cell[header]);
+			}
 			return LOOP_START;
 			break;
 		case ']':
@@ -130,7 +137,7 @@ bf_Operator code_run(char *buffer, int *index)
 			return LOOP_END;
 			break;
 	}
-	return ERROR;
+	return SKIP;
 }
 
 int code_run_loop(char *buffer, int index)
@@ -159,7 +166,7 @@ bool code_check(char code)
 	}
 }
 
-MEMORY *memory_new(MEMORY *bf_memory, bf_Operator op)
+MEMORY *memory_new(MEMORY *bf_memory, BF_OPERATOR op)
 {
 	if (op == NEXT)
 	{
@@ -270,7 +277,7 @@ void my_strerror(short errcode, const char *com, const char *option)
 			break;
 		// 90~: source error
 		case 91:
-			fprintf(stderr, "no operator '[' corresponding to ']'.\n\n");
+			fprintf(stderr, "no operator '[' corresponding to ']'.\n");
 			break;
 		// 100~: option warning
 		case 101:
