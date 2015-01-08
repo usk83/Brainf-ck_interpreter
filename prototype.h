@@ -4,9 +4,11 @@
 #include <stdbool.h>
 #include "getopt_long/my_getopt.h"
 
-#define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
-#define BUF_LEN 1024
 #define CELL_LEN 30
+// #define BUF_LEN 256
+
+// debug
+#define BUF_LEN 1024
 
 typedef unsigned char BYTE;
 
@@ -17,13 +19,20 @@ typedef struct memory
 	struct memory* prev;
 } MEMORY;
 
-enum OP {NEXT, PREV};
+typedef struct buffer
+{
+	char value[BUF_LEN];
+	struct buffer* next;
+} BUFFER;
 
-void source_load(FILE **fp, char *buffer, int length, int argc, char *argv[]);
+typedef enum {PLUS, MINUS, NEXT, PREV, INPUT, OUTPUT, LOOP_START, LOOP_END, ERROR, SKIP} BF_OPERATOR;
+
+char* source_load(FILE **fp, BUFFER *bf_buffer, int length, int argc, char *argv[]);
 void my_strerror(short errcode, const char *com, const char *option);
 void usage(const char *com);
 void checkopt(int argc, char *argv[]);
-void code_run(char code);
+BF_OPERATOR code_run(BUFFER *bf_buffer, int *index);
 void memory_init(MEMORY *bf_memory);
-MEMORY *memory_new(MEMORY *bf_memory, enum OP op);
+MEMORY *memory_new(MEMORY *bf_memory, BF_OPERATOR op);
 bool code_check(char code);
+int code_run_loop(BUFFER *bf_buffer, int index);
