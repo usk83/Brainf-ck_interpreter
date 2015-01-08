@@ -5,8 +5,10 @@
 #include "getopt_long/my_getopt.h"
 
 #define CELL_LEN 30
-#define BUF_LEN 1024
 // #define BUF_LEN 256
+
+// debug
+#define BUF_LEN 1024
 
 typedef unsigned char BYTE;
 

@@ -2,6 +2,8 @@
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
+bool enable_debug = false;
+
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
@@ -15,7 +17,7 @@ int main(int argc, char *argv[])
 		for (i=0; bf_buffer.value[i] != '\0'; i++)
 		{
 			// debug
-			printf("dbg point %d\n", i);
+			// printf("dbg point %d\n", i);
 			// if (i == 134) exit(EXIT_FAILURE);
 
 			if (code_run(&bf_buffer, &i) == ERROR)
@@ -183,7 +185,13 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return LOOP_END;
 			break;
 		case '!':
-			printf("[dbg]");
+			if (enable_debug)
+				printf("[dbg]");
+			return SKIP;
+			break;
+		case '?':
+			if (enable_debug)
+				printf("[dbg: memory=%d]", bf_memory->cell[header]);
 			return SKIP;
 			break;
 	}
@@ -360,21 +368,27 @@ void checkopt(int argc, char *argv[])
 	// helpオプションがある場合はusageのみ表示されるようにする
 	for (i=0; i<argc; i++)
 	{
-		if (!strcmp(argv[i], "--help"))
+		if (argv[i][0] == '-')
 		{
-			opterr = 0; // エラーメッセージを非表示にする
-		}
-		else if (argv[i][0] == '-')
-		{
-			for (j=1; j<strlen(argv[i]); j++)
+			if (argv[i][1] == '-')
 			{
-				if (argv[i][j] == 'h')
+				if (!strncmp(argv[i], "--help", 3))
 				{
 					opterr = 0; // エラーメッセージを非表示にする
 				}
 			}
+			else
+			{
+				for (j=1; j<strlen(argv[i]); j++)
+				{
+					if (argv[i][j] == 'h')
+					{
+						opterr = 0; // エラーメッセージを非表示にする
+					}
+				}
+			}
 		}
-		}
+	}
 
 	struct option long_options[] =
 	{
@@ -382,7 +396,7 @@ void checkopt(int argc, char *argv[])
 		{0, 0, 0, 0}
 	};
 
-	while((opt = my_getopt_long(argc, argv, "h", long_options, &option_index)) != -1)
+	while((opt = my_getopt_long(argc, argv, "hd", long_options, &option_index)) != -1)
 	{
 		switch(opt)
 		{
@@ -398,6 +412,9 @@ void checkopt(int argc, char *argv[])
 			case 'h':
 				usage(argv[0]);
 				exit(EXIT_SUCCESS);
+				break;
+			case 'd':
+				enable_debug = true;
 				break;
 			case '?':
 				// Unknown or required argument.
