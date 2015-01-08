@@ -140,34 +140,45 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			break;
 		case '[':
 			start = *index;
-			while (bf_memory->cell[header])
+			if (bf_memory->cell[header])
 			{
-				if (*index > 201)
+				// puts("hoge");
+				while (bf_memory->cell[header])
 				{
-					printf("*index = %d\n", *index);
-					puts("------");
+					// puts("");
+					// debug
+					// if (*index > 201)
+					// {
+					// 	printf("*index = %d\n", *index);
+					// 	puts("------");
+					// }
+					// debug
+					// if (*index == 213)
+					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
+					// if (*index == 246)
+					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
+					// if (*index >= 170)
+					// {
+					// 	printf("%d\n", bf_memory->cell[header]);
+					// }
+
+					loop++;
+
+					// debug
+					// if (*index >= 170)
+						// fprintf(stderr, "start:cell[header]=%d\n", bf_memory->cell[header]);
+
+					*index = code_run_loop(bf_buffer, start);
+
+					// debug
+					// if (*index >= 170)
+						// fprintf(stderr, "\nend:cell[header]=%d\n", bf_memory->cell[header]);
 				}
-				// debug
-				// if (*index == 213)
-				// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-				// if (*index == 246)
-				// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-				// if (*index >= 170)
-				// {
-				// 	printf("%d\n", bf_memory->cell[header]);
-				// }
-
-				loop++;
-
-				// debug
-				// if (*index >= 170)
-					// fprintf(stderr, "start:cell[header]=%d\n", bf_memory->cell[header]);
-
-				*index = code_run_loop(bf_buffer, start);
-
-				// debug
-				// if (*index >= 170)
-					// fprintf(stderr, "\nend:cell[header]=%d\n", bf_memory->cell[header]);
+			}
+			else
+			{
+				// puts("error value=0 when [");
+				// exit(EXIT_FAILURE);
 			}
 
 			// debug
