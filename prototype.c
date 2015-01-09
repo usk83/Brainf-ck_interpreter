@@ -16,10 +16,6 @@ int main(int argc, char *argv[])
 	{
 		for (i=0; bf_buffer.value[i] != '\0'; i++)
 		{
-			// debug
-			// printf("dbg point %d\n", i);
-			// if (i == 134) exit(EXIT_FAILURE);
-
 			if (code_run(&bf_buffer, &i) == ERROR)
 			{
 				puts("");
@@ -56,11 +52,6 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	char input;
 	int start;
 
-	// debug
-	// DBG("%d\n", *index);
-	// if (*index == 246)
-	// 	printf("%d\n", bf_memory->cell[header]);
-
 	if (bf_memory == NULL)
 	{
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
@@ -75,15 +66,6 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			break;
 		case '-':
 			bf_memory->cell[header]--;
-
-			// debug
-			// if (*index == 214)
-				// printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-			// if (*index == 171)
-			// {
-			// 	printf("マイナス後 %d\n", bf_memory->cell[header]);
-			// }
-			// printf("%d\n", bf_memory->cell[header]);
 
 			return MINUS;
 			break;
@@ -145,46 +127,16 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 				puts("hoge");
 				while (bf_memory->cell[header])
 				{
-					// puts("");
-					// debug
-					// if (*index > 201)
-					// {
-					// 	printf("*index = %d\n", *index);
-					// 	puts("------");
-					// }
-					// debug
-					// if (*index == 213)
-					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-					// if (*index == 246)
-					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-					// if (*index >= 170)
-					// {
-					// 	printf("%d\n", bf_memory->cell[header]);
-					// }
-
 					loop++;
-
-					// debug
-					// if (*index >= 170)
-						// fprintf(stderr, "start:cell[header]=%d\n", bf_memory->cell[header]);
-
 					*index = code_run_loop(bf_buffer, start);
-
-					// debug
-					// if (*index >= 170)
-						// fprintf(stderr, "\nend:cell[header]=%d\n", bf_memory->cell[header]);
 				}
 			}
 			else
 			{
-				// puts("error value=0 when [");
-				// exit(EXIT_FAILURE);
+				// 未実装部分
+				puts("error value=0 when [");
+				exit(EXIT_FAILURE);
 			}
-
-			// debug
-			// if (*index >= 170)
-				// puts("out of while");
-
 			return LOOP_START;
 			break;
 		case ']':
@@ -214,11 +166,6 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 	while (1)
 	{
 		index++;
-		// DBG("%d\n", BUF_LEN);
-		// if (index > sizeof(bf_buffer->value))
-		// {
-		// 	DBG("index:%d\n", index);
-		// }
 		if (code_run(bf_buffer, &index) == LOOP_END)
 		{
 			return index;
