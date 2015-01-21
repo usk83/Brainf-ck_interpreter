@@ -58,6 +58,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	static int loop = 0;
 	char input;
 	int start;
+	int tmp_loop;
 
 	if (dev_debug) {
 		DBG("%d\n", *index);
@@ -71,7 +72,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		header = sizeof(bf_memory->cell)/2;
 		memory_init(bf_memory);
 	}
-	switch(bf_buffer->value[*index])
+	switch (bf_buffer->value[*index])
 	{
 		case '+':
 			bf_memory->cell[header]++;
@@ -183,33 +184,40 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			}
 			else
 			{
-				puts("error value=0 when [");
-				exit(EXIT_FAILURE);
+				tmp_loop = loop;
+				loop++;
+				while (tmp_loop < loop)
+				{
+					*index = *index + 1;
+					if (bf_buffer->value[*index] == '[') {
+						loop++;
+					}
+					else if (bf_buffer->value[*index] == ']') {
+						loop--;
+					}
+				}
+				// puts("error value=0 when [");
+				// exit(EXIT_FAILURE);
 			}
-
-			if (dev_debug) {
-				if (*index >= 170)
-					puts("out of while");
-			}
-
 			return LOOP_START;
 			break;
 		case ']':
-			if (!loop)
-			{
+			if (!loop) {
 				return ERROR;
 			}
 			loop--;
 			return LOOP_END;
 			break;
 		case '!':
-			if (enable_debug)
+			if (enable_debug) {
 				printf("[dbg]");
+			}
 			return SKIP;
 			break;
 		case '?':
-			if (enable_debug)
+			if (enable_debug) {
 				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+			}
 			return SKIP;
 			break;
 	}
@@ -226,23 +234,25 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 			if (index > sizeof(bf_buffer->value))
 				DBG("index:%d\n", index);
 		}
-		if (code_run(bf_buffer, &index) == LOOP_END)
-		{
+		if (code_run(bf_buffer, &index) == LOOP_END) {
 			return index;
 		}
+
 	}
 }
 
 // 表示できない制御文字を判定
 bool code_check(char code)
 {
-	// tab、改行、esc、space、文字は表示に問題ない
-	if (code == 9 || code == 10 || code == 27 || code == 32 || (code >= 33 && code <= 126))
-	{
+	// tab、改行、space、文字は表示に問題ない
+	if (code == 9 || code == 10 || code == 32 || (code >= 33 && code <= 126)) {
 		return true;
 	}
-	else
-	{
+	// escは表示に問題ないが、表示されない
+	else if (code == 27) {
+		return false;
+	}
+	else {
 		return false;
 	}
 }
