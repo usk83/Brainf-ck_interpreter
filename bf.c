@@ -1,8 +1,10 @@
-#include "prototype.h"
+#include "bf.h"
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
-bool enable_debug = false;
+int dev_debug = 0; // debug用コードの有効化
+
+bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
 
 int main(int argc, char *argv[])
 {
@@ -51,6 +53,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	static int loop = 0;
 	char input;
 	int start;
+	int tmp_loop;
 
 	if (bf_memory == NULL)
 	{
@@ -58,7 +61,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		header = sizeof(bf_memory->cell)/2;
 		memory_init(bf_memory);
 	}
-	switch(bf_buffer->value[*index])
+	switch (bf_buffer->value[*index])
 	{
 		case '+':
 			bf_memory->cell[header]++;
@@ -66,7 +69,6 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			break;
 		case '-':
 			bf_memory->cell[header]--;
-
 			return MINUS;
 			break;
 		case '>':
@@ -124,7 +126,6 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			start = *index;
 			if (bf_memory->cell[header])
 			{
-				puts("hoge");
 				while (bf_memory->cell[header])
 				{
 					loop++;
@@ -133,28 +134,38 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			}
 			else
 			{
-				// 未実装部分
-				puts("error value=0 when [");
-				exit(EXIT_FAILURE);
+				tmp_loop = loop;
+				loop++;
+				while (tmp_loop < loop)
+				{
+					*index = *index + 1;
+					if (bf_buffer->value[*index] == '[') {
+						loop++;
+					}
+					else if (bf_buffer->value[*index] == ']') {
+						loop--;
+					}
+				}
 			}
 			return LOOP_START;
 			break;
 		case ']':
-			if (!loop)
-			{
+			if (!loop) {
 				return ERROR;
 			}
 			loop--;
 			return LOOP_END;
 			break;
 		case '!':
-			if (enable_debug)
+			if (enable_debug) {
 				printf("[dbg]");
+			}
 			return SKIP;
 			break;
 		case '?':
-			if (enable_debug)
+			if (enable_debug) {
 				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+			}
 			return SKIP;
 			break;
 	}
@@ -166,8 +177,7 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 	while (1)
 	{
 		index++;
-		if (code_run(bf_buffer, &index) == LOOP_END)
-		{
+		if (code_run(bf_buffer, &index) == LOOP_END) {
 			return index;
 		}
 	}
@@ -176,13 +186,15 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 // 表示できない制御文字を判定
 bool code_check(char code)
 {
-	// tab、改行、esc、space、文字は表示に問題ない
-	if (code == 9 || code == 10 || code == 27 || code == 32 || (code >= 33 && code <= 126))
-	{
+	// tab、改行、space、文字は表示に問題ない
+	if (code == 9 || code == 10 || code == 32 || (code >= 33 && code <= 126)) {
 		return true;
 	}
-	else
-	{
+	// escは表示に問題ないが、表示されない
+	else if (code == 27) {
+		return false;
+	}
+	else {
 		return false;
 	}
 }
@@ -379,6 +391,5 @@ void checkopt(int argc, char *argv[])
 				break;
 		}
 	}
-
 	return;
 }

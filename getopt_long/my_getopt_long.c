@@ -59,7 +59,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "getopt.h"
- #include "../prototype.h"
+ #include "../bf.h"
 
 
 
