@@ -2,7 +2,9 @@
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
-bool enable_debug = false;
+int dev_debug = 0; // debug用コードの有効化
+
+bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
 
 int main(int argc, char *argv[])
 {
@@ -16,9 +18,10 @@ int main(int argc, char *argv[])
 	{
 		for (i=0; bf_buffer.value[i] != '\0'; i++)
 		{
-			// debug
-			// printf("dbg point %d\n", i);
-			// if (i == 134) exit(EXIT_FAILURE);
+			if (dev_debug) {
+				printf("dbg point %d\n", i);
+				if (i == 134) exit(EXIT_FAILURE);
+			}
 
 			if (code_run(&bf_buffer, &i) == ERROR)
 			{
@@ -56,10 +59,11 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	char input;
 	int start;
 
-	// debug
-	// DBG("%d\n", *index);
-	// if (*index == 246)
-	// 	printf("%d\n", bf_memory->cell[header]);
+	if (dev_debug) {
+		DBG("%d\n", *index);
+		if (*index == 246)
+		printf("%d\n", bf_memory->cell[header]);
+	}
 
 	if (bf_memory == NULL)
 	{
@@ -76,14 +80,13 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		case '-':
 			bf_memory->cell[header]--;
 
-			// debug
-			// if (*index == 214)
-				// printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-			// if (*index == 171)
-			// {
-			// 	printf("マイナス後 %d\n", bf_memory->cell[header]);
-			// }
-			// printf("%d\n", bf_memory->cell[header]);
+			if (dev_debug) {
+				if (*index == 214)
+					printf("cell: %d header: %d\n", bf_memory->cell[header], header);
+				if (*index == 171)
+					printf("マイナス後 %d\n", bf_memory->cell[header]);
+				printf("%d\n", bf_memory->cell[header]);
+			}
 
 			return MINUS;
 			break;
@@ -142,48 +145,52 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			start = *index;
 			if (bf_memory->cell[header])
 			{
-				puts("hoge");
+				if (dev_debug) {
+					puts("hoge");
+				}
 				while (bf_memory->cell[header])
 				{
-					// puts("");
-					// debug
-					// if (*index > 201)
-					// {
-					// 	printf("*index = %d\n", *index);
-					// 	puts("------");
-					// }
-					// debug
-					// if (*index == 213)
-					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-					// if (*index == 246)
-					// 	printf("cell: %d header: %d\n", bf_memory->cell[header], header);
-					// if (*index >= 170)
-					// {
-					// 	printf("%d\n", bf_memory->cell[header]);
-					// }
+					if (dev_debug) {
+						if (*index > 201)
+						{
+							printf("*index = %d\n", *index);
+							puts("------");
+						}
+					}
+					if (dev_debug) {
+						if (*index == 213)
+							printf("cell: %d header: %d\n", bf_memory->cell[header], header);
+						if (*index == 246)
+							printf("cell: %d header: %d\n", bf_memory->cell[header], header);
+						if (*index >= 170)
+							printf("%d\n", bf_memory->cell[header]);
+					}
 
 					loop++;
 
-					// debug
-					// if (*index >= 170)
-						// fprintf(stderr, "start:cell[header]=%d\n", bf_memory->cell[header]);
+					if (dev_debug) {
+						if (*index >= 170)
+							fprintf(stderr, "start:cell[header]=%d\n", bf_memory->cell[header]);
+					}
 
 					*index = code_run_loop(bf_buffer, start);
 
-					// debug
-					// if (*index >= 170)
-						// fprintf(stderr, "\nend:cell[header]=%d\n", bf_memory->cell[header]);
+					if (dev_debug) {
+						if (*index >= 170)
+							fprintf(stderr, "\nend:cell[header]=%d\n", bf_memory->cell[header]);
+					}
 				}
 			}
 			else
 			{
-				// puts("error value=0 when [");
-				// exit(EXIT_FAILURE);
+				puts("error value=0 when [");
+				exit(EXIT_FAILURE);
 			}
 
-			// debug
-			// if (*index >= 170)
-				// puts("out of while");
+			if (dev_debug) {
+				if (*index >= 170)
+					puts("out of while");
+			}
 
 			return LOOP_START;
 			break;
@@ -214,11 +221,11 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 	while (1)
 	{
 		index++;
-		// DBG("%d\n", BUF_LEN);
-		// if (index > sizeof(bf_buffer->value))
-		// {
-		// 	DBG("index:%d\n", index);
-		// }
+		if (dev_debug) {
+			DBG("%d\n", BUF_LEN);
+			if (index > sizeof(bf_buffer->value))
+				DBG("index:%d\n", index);
+		}
 		if (code_run(bf_buffer, &index) == LOOP_END)
 		{
 			return index;
@@ -432,6 +439,5 @@ void checkopt(int argc, char *argv[])
 				break;
 		}
 	}
-
 	return;
 }
