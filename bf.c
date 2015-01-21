@@ -1,4 +1,4 @@
-#include "prototype.h"
+#include "bf.h"
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
