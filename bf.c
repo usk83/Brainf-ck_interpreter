@@ -2,15 +2,17 @@
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
-int dev_debug = 0; // debug用コードの有効化
+static int dev_debug = 0; // debug用コードの有効化
 
-bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
+static bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
 
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
 	BUFFER bf_buffer;
 	int i;
+
+	my_termios_init();
 
 	const char *source = source_load(&fp, &bf_buffer, sizeof(bf_buffer.value), argc, argv);
 
@@ -44,6 +46,86 @@ int main(int argc, char *argv[])
 	}
 
 	return EXIT_SUCCESS;
+}
+
+void my_wait()
+{
+	static bool flag = true;
+	if(flag) {
+		flag = false;
+		printf("_\b");
+		fflush(stdout);
+	}
+	else {
+		flag = true;
+		printf(" \b");
+		fflush(stdout);
+	}
+}
+
+int my_getchar(int interval)
+{
+	char c = 0;
+	struct sigaction sa;
+	struct itimerval itimer;
+
+	// シグナルハンドラの設定
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_handler = my_wait;
+	//sa.sa_flags   = SA_RESTART;
+	if (sigaction(SIGALRM, &sa, NULL) != 0) {
+		// perror("sigaction");
+		return 0;
+	}
+	// タイマーの設定
+	itimer.it_value.tv_sec  = itimer.it_interval.tv_sec  = interval; // sec
+	itimer.it_value.tv_usec = itimer.it_interval.tv_usec = 0; // micro sec
+	if (setitimer(ITIMER_REAL, &itimer, NULL) < 0) {
+		// perror("setitimer");
+		return 0;
+	}
+
+	// １文字入力
+	read(1, &c, 1);
+
+	return c;
+}
+
+void my_termios_init(void)
+{
+	// 初期状態の端末設定 (cooked モード) を取得・保存する．
+	tcgetattr(STDIN_FILENO, &CookedTermIos);
+
+	// 入力時用の端末設定を作成・保存する．
+	MyTermIos = CookedTermIos;
+	// cfmakeraw(&MyTermIos);
+	// MyTermIos.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	// MyTermIos.c_oflag &= ~OPOST;
+	// MyTermIos.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	// MyTermIos.c_cflag &= ~(CSIZE | PARENB);
+	// MyTermIos.c_cflag |= CS8;
+
+	// 入力を表示しない、エンターを待たない、特殊文字にに対応しない(ctrl+c, ctrl+\は手動で対応)
+	MyTermIos.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG);
+	return;
+}
+
+void exit_signal(char sig)
+{
+	// 端末設定を元に戻す．
+	tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
+	if (sig == 0x03) {
+		printf("^C");
+		exit(130);
+	}
+	else if (sig == 0x1c) {
+		printf("^\\");
+		exit(131);
+	}
+	else {
+		printf("bad exit signal.");
+		exit(EXIT_FAILURE);
+	}
 }
 
 BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
@@ -102,13 +184,26 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return PREV;
 			break;
 		case ',':
-			printf("\ninput a 1byte character: ");
-			input = getchar();
-			bf_memory->cell[header] = input;
-			// 二文字目以降があるときは捨てる
-			if(input != '\n')
-				while (getchar() != '\n');
-
+			// 端末を変更する
+			tcsetattr(STDIN_FILENO, 0, &MyTermIos);
+			printf("  (Press any key to input.)\x1b[27D");
+			while (1)
+			{
+				input = my_getchar(1);
+				while (input == 0)
+				{
+					input = my_getchar(1);
+				}
+				if (input == 0x03 || input == 0x1c) {
+					exit_signal(input);
+				}
+				else {
+					bf_memory->cell[header] = input;
+					break;
+				}
+			}
+			// 端末設定を元に戻す．
+			tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
 			return INPUT;
 			break;
 		case '.':
@@ -165,6 +260,30 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		case '?':
 			if (enable_debug) {
 				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+			}
+			return SKIP;
+			break;
+		case '#':
+			if (enable_debug) {
+				// 端末を変更する
+				tcsetattr(STDIN_FILENO, 0, &MyTermIos);
+				printf("  (Press enter to continue.)\x1b[28D");
+				while (1)
+				{
+					input = my_getchar(1);
+					while (input == 0)
+					{
+						input = my_getchar(1);
+					}
+					if (input == '\n') {
+						break;
+					}
+					else if (input == 0x03 || input == 0x1c) {
+						exit_signal(input);
+					}
+				}
+				// 端末設定を元に戻す．
+				tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
 			}
 			return SKIP;
 			break;
@@ -279,12 +398,12 @@ void my_strerror(short errcode, const char *com, const char *option)
 	// ~100: error
 	if (errcode < 100)
 	{
-		fprintf(stderr, "%s: error: ", com);
+		fprintf(stderr, "%s: \x1b[31merror\x1b[39m: ", com);
 	}
 	// 100~: warnig
 	else
 	{
-		fprintf(stderr, "%s: warning: ", com);
+		fprintf(stderr, "%s: \x1b[33mwarning\x1b[39m: ", com);
 	}
 
 	switch (errcode)
