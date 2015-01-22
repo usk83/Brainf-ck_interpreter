@@ -48,6 +48,49 @@ int main(int argc, char *argv[])
 	return EXIT_SUCCESS;
 }
 
+void my_wait()
+{
+	static bool flag = true;
+	if(flag) {
+		flag = false;
+		printf("_\b");
+		fflush(stdout);
+	}
+	else {
+		flag = true;
+		printf(" \b");
+		fflush(stdout);
+	}
+}
+
+int my_getchar(int interval)
+{
+	char c = 0;
+	struct sigaction sa;
+	struct itimerval itimer;
+
+	// シグナルハンドラの設定
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_handler = my_wait;
+	//sa.sa_flags   = SA_RESTART;
+	if (sigaction(SIGALRM, &sa, NULL) != 0) {
+		// perror("sigaction");
+		return 0;
+	}
+	// タイマーの設定
+	itimer.it_value.tv_sec  = itimer.it_interval.tv_sec  = interval; // sec
+	itimer.it_value.tv_usec = itimer.it_interval.tv_usec = 0; // micro sec
+	if (setitimer(ITIMER_REAL, &itimer, NULL) < 0) {
+		// perror("setitimer");
+		return 0;
+	}
+
+	// １文字入力
+	read(1, &c, 1);
+
+	return c;
+}
+
 void my_termios_init(void)
 {
 	// 初期状態の端末設定 (cooked モード) を取得・保存する．
@@ -141,13 +184,26 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return PREV;
 			break;
 		case ',':
-			printf("\ninput a 1byte character: ");
-			input = getchar();
-			bf_memory->cell[header] = input;
-			// 二文字目以降があるときは捨てる
-			if(input != '\n')
-				while (getchar() != '\n');
-
+			// 端末を変更する
+			tcsetattr(STDIN_FILENO, 0, &MyTermIos);
+			printf("  (Press any key to input.)\x1b[27D");
+			while (1)
+			{
+				input = my_getchar(1);
+				while (input == 0)
+				{
+					input = my_getchar(1);
+				}
+				if (input == 0x03 || input == 0x1c) {
+					exit_signal(input);
+				}
+				else {
+					bf_memory->cell[header] = input;
+					break;
+				}
+			}
+			// 端末設定を元に戻す．
+			tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
 			return INPUT;
 			break;
 		case '.':
@@ -211,23 +267,21 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			if (enable_debug) {
 				// 端末を変更する
 				tcsetattr(STDIN_FILENO, 0, &MyTermIos);
+				printf("  (Press enter to continue.)\x1b[28D");
 				while (1)
 				{
-					input = getchar();
+					input = my_getchar(1);
+					while (input == 0)
+					{
+						input = my_getchar(1);
+					}
 					if (input == '\n') {
 						break;
 					}
 					else if (input == 0x03 || input == 0x1c) {
 						exit_signal(input);
 					}
-					else if (input == 'c') {
-						// printf("\x1b[2J");
-						// printf("\b");
-						// system("clear");
-						// printf("\a");
-					}
 				}
-
 				// 端末設定を元に戻す．
 				tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
 			}
@@ -344,12 +398,12 @@ void my_strerror(short errcode, const char *com, const char *option)
 	// ~100: error
 	if (errcode < 100)
 	{
-		fprintf(stderr, "%s: error: ", com);
+		fprintf(stderr, "%s: \x1b[31merror\x1b[39m: ", com);
 	}
 	// 100~: warnig
 	else
 	{
-		fprintf(stderr, "%s: warning: ", com);
+		fprintf(stderr, "%s: \x1b[33mwarning\x1b[39m: ", com);
 	}
 
 	switch (errcode)

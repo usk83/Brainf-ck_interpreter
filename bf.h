@@ -5,6 +5,8 @@
 // #include <ctype.h>
 #include <unistd.h>
 #include <termios.h>
+#include <signal.h>
+#include <sys/time.h>
 #include "getopt_long/my_getopt.h"
 
 #define CELL_LEN 30
@@ -45,3 +47,4 @@ bool code_check(char code);
 int code_run_loop(BUFFER *bf_buffer, int index);
 void my_termios_init(void);
 void exit_signal(char sig);
+int my_getchar(int interval);
