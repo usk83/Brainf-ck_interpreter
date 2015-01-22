@@ -2,15 +2,17 @@
 
 #define DBG(...) (printf("%s %u @%s(): ",__FILE__,__LINE__,__func__), printf(__VA_ARGS__)), puts("")
 
-int dev_debug = 0; // debug用コードの有効化
+static int dev_debug = 0; // debug用コードの有効化
 
-bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
+static bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
 
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
 	BUFFER bf_buffer;
 	int i;
+
+	my_termios_init();
 
 	const char *source = source_load(&fp, &bf_buffer, sizeof(bf_buffer.value), argc, argv);
 
@@ -44,6 +46,43 @@ int main(int argc, char *argv[])
 	}
 
 	return EXIT_SUCCESS;
+}
+
+void my_termios_init(void)
+{
+	// 初期状態の端末設定 (cooked モード) を取得・保存する．
+	tcgetattr(STDIN_FILENO, &CookedTermIos);
+
+	// 入力時用の端末設定を作成・保存する．
+	MyTermIos = CookedTermIos;
+	// cfmakeraw(&MyTermIos);
+	// MyTermIos.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	// MyTermIos.c_oflag &= ~OPOST;
+	// MyTermIos.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	// MyTermIos.c_cflag &= ~(CSIZE | PARENB);
+	// MyTermIos.c_cflag |= CS8;
+
+	// 入力を表示しない、エンターを待たない、特殊文字にに対応しない(ctrl+c, ctrl+\は手動で対応)
+	MyTermIos.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG);
+	return;
+}
+
+void exit_signal(char sig)
+{
+	// 端末設定を元に戻す．
+	tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
+	if (sig == 0x03) {
+		printf("^C");
+		exit(130);
+	}
+	else if (sig == 0x1c) {
+		printf("^\\");
+		exit(131);
+	}
+	else {
+		printf("bad exit signal.");
+		exit(EXIT_FAILURE);
+	}
 }
 
 BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
@@ -165,6 +204,32 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		case '?':
 			if (enable_debug) {
 				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+			}
+			return SKIP;
+			break;
+		case '#':
+			if (enable_debug) {
+				// 端末を変更する
+				tcsetattr(STDIN_FILENO, 0, &MyTermIos);
+				while (1)
+				{
+					input = getchar();
+					if (input == '\n') {
+						break;
+					}
+					else if (input == 0x03 || input == 0x1c) {
+						exit_signal(input);
+					}
+					else if (input == 'c') {
+						// printf("\x1b[2J");
+						// printf("\b");
+						// system("clear");
+						// printf("\a");
+					}
+				}
+
+				// 端末設定を元に戻す．
+				tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
 			}
 			return SKIP;
 			break;
