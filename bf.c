@@ -66,22 +66,26 @@ void my_wait()
 int my_getchar(int interval)
 {
 	char c = 0;
-	struct sigaction sa;
-	struct itimerval itimer;
+	static struct itimerval itimer;
+	static bool init_flag = true;
 
-	// シグナルハンドラの設定
-	memset(&sa, 0, sizeof(struct sigaction));
-	sa.sa_handler = my_wait;
-	//sa.sa_flags   = SA_RESTART;
-	if (sigaction(SIGALRM, &sa, NULL) != 0) {
-		// perror("sigaction");
-		return 0;
+	if (init_flag) {
+		struct sigaction sa;
+		// シグナルハンドラの設定
+		memset(&sa, 0, sizeof(struct sigaction));
+		sa.sa_handler = my_wait;
+		//sa.sa_flags   = SA_RESTART;
+		if (sigaction(SIGALRM, &sa, NULL) != 0) {
+			perror("sigaction");
+			return 0;
+		}
+		// タイマーの設定
+		itimer.it_value.tv_sec  = itimer.it_interval.tv_sec  = interval; // sec
+		itimer.it_value.tv_usec = itimer.it_interval.tv_usec = 0; // micro sec
+		init_flag = false;
 	}
-	// タイマーの設定
-	itimer.it_value.tv_sec  = itimer.it_interval.tv_sec  = interval; // sec
-	itimer.it_value.tv_usec = itimer.it_interval.tv_usec = 0; // micro sec
 	if (setitimer(ITIMER_REAL, &itimer, NULL) < 0) {
-		// perror("setitimer");
+		perror("setitimer");
 		return 0;
 	}
 
