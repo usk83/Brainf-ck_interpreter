@@ -20,8 +20,7 @@ int main(int argc, char *argv[])
 	{
 		for (i=0; bf_buffer.value[i] != '\0'; i++)
 		{
-			if (code_run(&bf_buffer, &i) == ERROR)
-			{
+			if (code_run(&bf_buffer, &i) == ERROR) {
 				puts("");
 				my_strerror(91, source, NULL);
 				exit(EXIT_FAILURE);
@@ -29,22 +28,18 @@ int main(int argc, char *argv[])
 		}
 
 		// fpが終端に達していなければ追加で読み込み
-		if (!feof(fp))
-		{
+		if (!feof(fp)) {
 			source_load(&fp, &bf_buffer, sizeof(bf_buffer.value), argc, argv);
 		}
 		// 終端に達していたらファイルの見込みを終了
-		else
-		{
-			if (fclose(fp) == EOF)
-			{
+		else {
+			if (fclose(fp) == EOF) {
 				my_strerror(2, argv[0], argv[optind]);
 				exit(EXIT_FAILURE);
 			}
 			break;
 		}
 	}
-
 	return EXIT_SUCCESS;
 }
 
@@ -89,8 +84,7 @@ int my_getchar(int interval)
 		return 0;
 	}
 
-	// １文字入力
-	read(1, &c, 1);
+	c = getchar();
 
 	return c;
 }
@@ -141,8 +135,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	int start;
 	int tmp_loop;
 
-	if (bf_memory == NULL)
-	{
+	if (bf_memory == NULL) {
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
 		header = sizeof(bf_memory->cell)/2;
 		memory_init(bf_memory);
@@ -158,8 +151,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return MINUS;
 			break;
 		case '>':
-			if (header == 29)
-			{
+			if (header == 29) {
 				// 次がなかったら作成
 				if (bf_memory->next == NULL)
 					bf_memory = memory_new(bf_memory, NEXT);
@@ -173,8 +165,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return NEXT;
 			break;
 		case '<':
-			if (header == 0)
-			{
+			if (header == 0) {
 				// 前がなかったら作成
 				if (bf_memory->prev == NULL)
 					bf_memory = memory_new(bf_memory, PREV);
@@ -194,7 +185,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			while (1)
 			{
 				input = my_getchar(1);
-				while (input == 0)
+				while (input == -1)
 				{
 					input = my_getchar(1);
 				}
@@ -223,16 +214,14 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			break;
 		case '[':
 			start = *index;
-			if (bf_memory->cell[header])
-			{
+			if (bf_memory->cell[header]) {
 				while (bf_memory->cell[header])
 				{
 					loop++;
 					*index = code_run_loop(bf_buffer, start);
 				}
 			}
-			else
-			{
+			else {
 				tmp_loop = loop;
 				loop++;
 				while (tmp_loop < loop)
@@ -275,7 +264,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 				while (1)
 				{
 					input = my_getchar(1);
-					while (input == 0)
+					while (input == -1)
 					{
 						input = my_getchar(1);
 					}
@@ -324,14 +313,12 @@ bool code_check(char code)
 
 MEMORY *memory_new(MEMORY *bf_memory, BF_OPERATOR op)
 {
-	if (op == NEXT)
-	{
+	if (op == NEXT) {
 		bf_memory->next = (MEMORY*) malloc(sizeof(MEMORY));
 		bf_memory->next->prev = bf_memory;
 		bf_memory = bf_memory->next;
 	}
-	else if (op == PREV)
-	{
+	else if (op == PREV) {
 		bf_memory->prev = (MEMORY*) malloc(sizeof(MEMORY));
 		bf_memory->prev->next = bf_memory;
 		bf_memory = bf_memory->prev;
@@ -352,11 +339,9 @@ void memory_init(MEMORY *bf_memory)
 char* source_load(FILE **fp, BUFFER *bf_buffer, int length, int argc, char *argv[])
 {
 	int size; // freadの戻り値を格納
-	if (*fp == NULL)
-	{
+	if (*fp == NULL) {
 		// 引数がないとき
-		if(argc == 1)
-		{
+		if(argc == 1) {
 			my_strerror(13, argv[0], NULL);
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
@@ -366,30 +351,26 @@ char* source_load(FILE **fp, BUFFER *bf_buffer, int length, int argc, char *argv
 		checkopt(argc, argv);
 
 		// オプション関係以外に引数がないとき
-		if (argc == optind)
-		{
+		if (argc == optind) {
 			my_strerror(13, argv[0], NULL);
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
 		}
 		// オプション以外の引数が2つ以上のとき
-		else if (argc - optind > 1)
-		{
+		else if (argc - optind > 1) {
 			my_strerror(12, argv[0], NULL);
 			usage(argv[0]);
 			exit(EXIT_FAILURE);
 		}
 
 		// file open to read
-		if ((*fp = fopen(argv[optind], "r")) == NULL)
-		{
+		if ((*fp = fopen(argv[optind], "r")) == NULL) {
 			my_strerror(1, argv[0], argv[optind]);
 			exit(EXIT_FAILURE);
 		}
 	}
 	size = fread(bf_buffer->value, sizeof(char), length-1, *fp);
-	if (size == EOF && !feof(*fp))
-	{
+	if (size == EOF && !feof(*fp)) {
 		my_strerror(3, argv[0], argv[optind]);
 		exit(EXIT_FAILURE);
 	}
@@ -400,13 +381,11 @@ char* source_load(FILE **fp, BUFFER *bf_buffer, int length, int argc, char *argv
 void my_strerror(short errcode, const char *com, const char *option)
 {
 	// ~100: error
-	if (errcode < 100)
-	{
+	if (errcode < 100) {
 		fprintf(stderr, "%s: \x1b[31merror\x1b[39m: ", com);
 	}
 	// 100~: warnig
-	else
-	{
+	else {
 		fprintf(stderr, "%s: \x1b[33mwarning\x1b[39m: ", com);
 	}
 
@@ -461,21 +440,16 @@ void checkopt(int argc, char *argv[])
 	// helpオプションがある場合はusageのみ表示されるようにする
 	for (i=0; i<argc; i++)
 	{
-		if (argv[i][0] == '-')
-		{
-			if (argv[i][1] == '-')
-			{
-				if (!strncmp(argv[i], "--help", 3))
-				{
+		if (argv[i][0] == '-') {
+			if (argv[i][1] == '-') {
+				if (!strncmp(argv[i], "--help", 3)) {
 					opterr = 0; // エラーメッセージを非表示にする
 				}
 			}
-			else
-			{
+			else {
 				for (j=1; j<strlen(argv[i]); j++)
 				{
-					if (argv[i][j] == 'h')
-					{
+					if (argv[i][j] == 'h') {
 						opterr = 0; // エラーメッセージを非表示にする
 					}
 				}

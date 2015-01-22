@@ -1,10 +1,14 @@
 Developing Memo
 =======================================
 
+## current topic
+スライド作成
+
+
 ## Neat things to do
 
-### my_getchar()の中身理解
 ### bufferを跨ぐ場合に対応
+
 
 ## progress ###########################
 
