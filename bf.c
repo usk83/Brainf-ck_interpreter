@@ -13,8 +13,10 @@ int main(int argc, char *argv[])
 	int i;
 
 	my_termios_init();
+	check_args(argc, argv);
+	fp = file_open(argv);
 
-	const char *source = source_load(&fp, &bf_buffer, sizeof(bf_buffer.value), argc, argv);
+	source_load(&bf_buffer, sizeof(bf_buffer.value), fp, argv);
 
 	while (1)
 	{
@@ -22,17 +24,15 @@ int main(int argc, char *argv[])
 		{
 			if (code_run(&bf_buffer, &i) == ERROR) {
 				puts("");
-				my_strerror(91, source, NULL);
+				my_strerror(91, argv[optind], NULL);
 				exit(EXIT_FAILURE);
 			}
 		}
 
 		// fpが終端に達していなければ追加で読み込み
-		if (!feof(fp)) {
-			source_load(&fp, &bf_buffer, sizeof(bf_buffer.value), argc, argv);
-		}
 		// 終端に達していたらファイルの見込みを終了
-		else {
+		if (source_load(&bf_buffer, sizeof(bf_buffer.value), NULL, NULL) < 0)
+		{
 			if (fclose(fp) == EOF) {
 				my_strerror(2, argv[0], argv[optind]);
 				exit(EXIT_FAILURE);
@@ -41,6 +41,42 @@ int main(int argc, char *argv[])
 		}
 	}
 	return EXIT_SUCCESS;
+}
+
+void check_args(int argc, char *argv[])
+{
+	// 引数がないとき
+	if(argc == 1) {
+		my_strerror(13, argv[0], NULL);
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	// オプションの処理
+	checkopt(argc, argv);
+
+	// オプション関係以外に引数がないとき
+	if (argc == optind) {
+		my_strerror(13, argv[0], NULL);
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	// オプション以外の引数が2つ以上のとき
+	else if (argc - optind > 1) {
+		my_strerror(12, argv[0], NULL);
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+}
+
+FILE *file_open(char *argv[])
+{
+	FILE *fp;
+	if ((fp = fopen(argv[optind], "r")) == NULL) {
+		my_strerror(1, argv[0], argv[optind]);
+		exit(EXIT_FAILURE);
+	}
+	return fp;
 }
 
 void my_wait()
@@ -291,10 +327,16 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 	while (1)
 	{
 		index++;
+
+		// buffer終端まで読み込んだときに追加読み込み
+		if (bf_buffer->value[index] == '\0') {
+			puts("loop error.");
+			exit(EXIT_FAILURE);
+		}
+
 		if (code_run(bf_buffer, &index) == LOOP_END) {
 			return index;
 		}
-		// buffer終端まで読み込んだときに追加読み込み
 	}
 }
 
@@ -339,46 +381,35 @@ void memory_init(MEMORY *bf_memory)
 	}
 }
 
-char* source_load(FILE **fp, BUFFER *bf_buffer, int length, int argc, char *argv[])
+int source_load(BUFFER *bf_buffer, int length, FILE *_fp, char *argv[])
 {
 	int size; // freadの戻り値を格納
-	if (*fp == NULL) {
-		// 引数がないとき
-		if(argc == 1) {
-			my_strerror(13, argv[0], NULL);
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
+	static FILE *fp = NULL;
+	static char *com;
+	static char *source;
 
-		// オプションの処理
-		checkopt(argc, argv);
-
-		// オプション関係以外に引数がないとき
-		if (argc == optind) {
-			my_strerror(13, argv[0], NULL);
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
-		// オプション以外の引数が2つ以上のとき
-		else if (argc - optind > 1) {
-			my_strerror(12, argv[0], NULL);
-			usage(argv[0]);
-			exit(EXIT_FAILURE);
-		}
-
-		// file open to read
-		if ((*fp = fopen(argv[optind], "r")) == NULL) {
-			my_strerror(1, argv[0], argv[optind]);
-			exit(EXIT_FAILURE);
-		}
+	if (_fp != NULL) {
+		fp = _fp;
 	}
-	size = fread(bf_buffer->value, sizeof(char), length-1, *fp);
-	if (size == EOF && !feof(*fp)) {
+	if (argv != NULL) {
+		com = (char*) malloc(strlen(argv[0]) + 1);
+		source = (char*) malloc(strlen(argv[optind]) + 1);
+		strncpy(com, argv[0], strlen(argv[0]) + 1);
+		strncpy(source, argv[optind], strlen(argv[optind]) + 1);
+	}
+
+	// fpが終端に達していたら-1を返す
+	if (feof(fp)) {
+		return -1;
+	}
+
+	size = fread(bf_buffer->value, sizeof(char), length-1, fp);
+	if (size == EOF && !feof(fp)) {
 		my_strerror(3, argv[0], argv[optind]);
 		exit(EXIT_FAILURE);
 	}
 	bf_buffer->value[size] = '\0';
-	return argv[optind];
+	return 0;
 }
 
 void my_strerror(short errcode, const char *com, const char *option)
