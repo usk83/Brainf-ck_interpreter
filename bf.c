@@ -9,29 +9,52 @@ static bool enable_debug = false; // dオプションでdebug用文字の処理�
 int main(int argc, char *argv[])
 {
 	FILE *fp = NULL;
-	BUFFER bf_buffer;
+	BUFFER *bf_buffer;
+	BUFFER *bf_tmp;
 	int i;
+	unsigned long ii, jj;
+	BF_OPERATOR ret;
+	unsigned long next_count = 0;
 
 	my_termios_init();
 	check_args(argc, argv);
 	fp = file_open(argv);
 
-	source_load(&bf_buffer, sizeof(bf_buffer.value), fp, argv);
+	bf_buffer = (BUFFER*) malloc(sizeof(BUFFER));
+	source_load(bf_buffer, sizeof(bf_buffer->value), fp, argv);
 
 	while (1)
 	{
-		for (i=0; bf_buffer.value[i] != '\0'; i++)
+		for (i=0; bf_buffer->value[i] != '\0'; i++)
 		{
-			if (code_run(&bf_buffer, &i) == ERROR) {
+			ret = code_run(bf_buffer, &i, &next_count);
+			if (ret == ERROR1) {
 				puts("");
 				my_strerror(91, argv[optind], NULL);
 				exit(EXIT_FAILURE);
 			}
+			else if (ret == ERROR2) {
+				puts("");
+				puts("loop内エラー");
+				exit(EXIT_FAILURE);
+			}
+			// next_countの数だけbuffer調整
+			bf_tmp = bf_buffer;
+			for (ii = next_count; ii != 0; ii--)
+			{
+				for (jj = ii; jj != 0; jj--)
+				{
+					bf_buffer = bf_buffer->next;
+				}
+				free(bf_buffer);
+				bf_buffer = bf_tmp;
+			}
+			bf_buffer->next = NULL;
 		}
 
 		// fpが終端に達していなければ追加で読み込み
 		// 終端に達していたらファイルの見込みを終了
-		if (source_load(&bf_buffer, sizeof(bf_buffer.value), NULL, NULL) < 0)
+		if (source_load(bf_buffer, sizeof(bf_buffer->value), NULL, NULL) < 0)
 		{
 			if (fclose(fp) == EOF) {
 				my_strerror(2, argv[0], argv[optind]);
@@ -162,14 +185,14 @@ void exit_signal(char sig)
 	}
 }
 
-BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
+BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 {
 	static MEMORY *bf_memory;
 	static short header;
-	static int loop = 0;
+	static unsigned long loop = 0;
 	char input;
 	int start;
-	int tmp_loop;
+	unsigned long tmp_loop;
 
 	if (bf_memory == NULL) {
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
@@ -254,7 +277,10 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 				while (bf_memory->cell[header])
 				{
 					loop++;
-					*index = code_run_loop(bf_buffer, start);
+					*index = code_run_loop(bf_buffer, start, next_count);
+					if (*index == -1) {
+						return ERROR2;
+					}
 				}
 			}
 			else {
@@ -275,7 +301,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			break;
 		case ']':
 			if (!loop) {
-				return ERROR;
+				return ERROR1;
 			}
 			loop--;
 			return LOOP_END;
@@ -322,7 +348,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	return SKIP;
 }
 
-int code_run_loop(BUFFER *bf_buffer, int index)
+int code_run_loop(BUFFER *bf_buffer, int index, unsigned long *next_count)
 {
 	while (1)
 	{
@@ -330,11 +356,30 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 
 		// buffer終端まで読み込んだときに追加読み込み
 		if (bf_buffer->value[index] == '\0') {
-			puts("loop error.");
-			exit(EXIT_FAILURE);
+			BUFFER *bf_tmp;
+			// bf_bufferの先頭のポインタをbf_tmpに代入
+			if (&next_count == 0) {
+				bf_tmp = bf_buffer;
+			}
+			else {
+				bf_tmp = bf_buffer->next;
+			}
+			// bufferを続きの領域を確保し、nextに先頭のポインタを代入
+			// bf_buffer->next = NULL;
+			bf_buffer->next = (BUFFER*) malloc(sizeof(BUFFER));
+			bf_buffer->next->next = bf_tmp;
+
+			bf_buffer = bf_buffer->next;
+			puts("break point");
+			if (source_load(bf_buffer, sizeof(bf_buffer->value), NULL, NULL) < 0) {
+				return -1;
+			}
+
+			// puts("loop error.");
+			// exit(EXIT_FAILURE);
 		}
 
-		if (code_run(bf_buffer, &index) == LOOP_END) {
+		if (code_run(bf_buffer, &index, next_count) == LOOP_END) {
 			return index;
 		}
 	}

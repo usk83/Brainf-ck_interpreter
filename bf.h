@@ -12,8 +12,8 @@
 // #define BUF_LEN 256
 
 // debug
-#define BUF_LEN 1024
-// #define BUF_LEN 50
+// #define BUF_LEN 1024
+#define BUF_LEN 50
 
 typedef unsigned char BYTE;
 
@@ -30,7 +30,7 @@ typedef struct buffer
 	struct buffer* next;
 } BUFFER;
 
-typedef enum {PLUS, MINUS, NEXT, PREV, INPUT, OUTPUT, LOOP_START, LOOP_END, ERROR, SKIP} BF_OPERATOR;
+typedef enum {PLUS, MINUS, NEXT, PREV, INPUT, OUTPUT, LOOP_START, LOOP_END, SKIP, ERROR1, ERROR2} BF_OPERATOR;
 
 // 端末設定保存用大域変数
 struct termios CookedTermIos; // cooked モード用
@@ -41,11 +41,11 @@ int source_load(BUFFER *bf_buffer, int length, FILE *_fp, char *argv[]);
 void my_strerror(short errcode, const char *com, const char *option);
 void usage(const char *com);
 void checkopt(int argc, char *argv[]);
-BF_OPERATOR code_run(BUFFER *bf_buffer, int *index);
+BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count);
 void memory_init(MEMORY *bf_memory);
 MEMORY *memory_new(MEMORY *bf_memory, BF_OPERATOR op);
 bool code_check(char code);
-int code_run_loop(BUFFER *bf_buffer, int index);
+int code_run_loop(BUFFER *bf_buffer, int index, unsigned long *next_count);
 void my_termios_init(void);
 void exit_signal(char sig);
 int my_getchar(int interval);
