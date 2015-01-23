@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 	BUFFER *bf_buffer;
 	BUFFER *bf_tmp;
 	int i;
-	unsigned long ii, jj;
+	unsigned long ii;
 	BF_OPERATOR ret;
 	unsigned long next_count = 0;
 
@@ -39,16 +39,13 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 			}
 			// next_countの数だけbuffer調整
-			bf_tmp = bf_buffer;
 			for (ii = next_count; ii != 0; ii--)
 			{
-				for (jj = ii; jj != 0; jj--)
-				{
-					bf_buffer = bf_buffer->next;
-				}
-				free(bf_buffer);
-				bf_buffer = bf_tmp;
+				bf_tmp = bf_buffer;
+				bf_buffer = bf_buffer->next;
+				free(bf_tmp);
 			}
+			next_count = 0;
 			bf_buffer->next = NULL;
 		}
 
@@ -187,11 +184,15 @@ void exit_signal(char sig)
 
 BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 {
+	printf("%c", bf_buffer->value[*index]);
+	fflush(stdout);
 	static MEMORY *bf_memory;
 	static short header;
 	static unsigned long loop = 0;
+	unsigned long ii;
 	char input;
 	int start;
+	unsigned start_next_count;
 	unsigned long tmp_loop;
 
 	if (bf_memory == NULL) {
@@ -253,6 +254,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 				}
 				else {
 					bf_memory->cell[header] = input;
+					printf("\x1b[0K");
 					break;
 				}
 			}
@@ -273,10 +275,17 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 			break;
 		case '[':
 			start = *index;
+			start_next_count = *next_count;
 			if (bf_memory->cell[header]) {
 				while (bf_memory->cell[header])
 				{
 					loop++;
+					if (start_next_count != 0) {
+						for (ii = start_next_count+1; ii != 0; ii--)
+						{
+							bf_buffer = bf_buffer->next;
+						}
+					}
 					*index = code_run_loop(bf_buffer, start, next_count);
 					if (*index == -1) {
 						return ERROR2;
@@ -333,6 +342,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 						input = my_getchar(1);
 					}
 					if (input == '\n') {
+						printf("\x1b[0K");
 						break;
 					}
 					else if (input == 0x03 || input == 0x1c) {
@@ -356,27 +366,19 @@ int code_run_loop(BUFFER *bf_buffer, int index, unsigned long *next_count)
 
 		// buffer終端まで読み込んだときに追加読み込み
 		if (bf_buffer->value[index] == '\0') {
-			BUFFER *bf_tmp;
-			// bf_bufferの先頭のポインタをbf_tmpに代入
-			if (&next_count == 0) {
-				bf_tmp = bf_buffer;
+			if (bf_buffer->next == NULL) {
+				*next_count = *next_count + 1;
+				// bufferを続きの領域を確保
+				bf_buffer->next = (BUFFER*) malloc(sizeof(BUFFER));
+				bf_buffer = bf_buffer->next;
+				if (source_load(bf_buffer, sizeof(bf_buffer->value), NULL, NULL) < 0) {
+					return -1;
+				}
 			}
 			else {
-				bf_tmp = bf_buffer->next;
+				bf_buffer = bf_buffer->next;
 			}
-			// bufferを続きの領域を確保し、nextに先頭のポインタを代入
-			// bf_buffer->next = NULL;
-			bf_buffer->next = (BUFFER*) malloc(sizeof(BUFFER));
-			bf_buffer->next->next = bf_tmp;
-
-			bf_buffer = bf_buffer->next;
-			puts("break point");
-			if (source_load(bf_buffer, sizeof(bf_buffer->value), NULL, NULL) < 0) {
-				return -1;
-			}
-
-			// puts("loop error.");
-			// exit(EXIT_FAILURE);
+			index = 0;
 		}
 
 		if (code_run(bf_buffer, &index, next_count) == LOOP_END) {
