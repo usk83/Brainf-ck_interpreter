@@ -12,7 +12,8 @@
 // #define BUF_LEN 256
 
 // debug
-#define BUF_LEN 1024
+// #define BUF_LEN 1024
+#define BUF_LEN 10240
 
 typedef unsigned char BYTE;
 

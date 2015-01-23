@@ -247,12 +247,14 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 		case '!':
 			if (enable_debug) {
 				printf("[dbg]");
+				fflush(stdout);
 			}
 			return SKIP;
 			break;
 		case '?':
 			if (enable_debug) {
 				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+				fflush(stdout);
 			}
 			return SKIP;
 			break;
@@ -292,6 +294,7 @@ int code_run_loop(BUFFER *bf_buffer, int index)
 		if (code_run(bf_buffer, &index) == LOOP_END) {
 			return index;
 		}
+		// buffer終端まで読み込んだときに追加読み込み
 	}
 }
 
