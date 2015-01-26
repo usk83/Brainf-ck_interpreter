@@ -28,6 +28,8 @@ int main(int argc, char *argv[])
 		for (i=0; bf_buffer->value[i] != '\0'; i++)
 		{
 			ret = code_run(bf_buffer, &i, &next_count);
+			printf(".");
+			fflush(stdout);
 			if (ret == ERROR1) {
 				puts("");
 				my_strerror(91, argv[optind], NULL);
@@ -46,7 +48,6 @@ int main(int argc, char *argv[])
 				free(bf_tmp);
 			}
 			next_count = 0;
-			bf_buffer->next = NULL;
 		}
 
 		// fpが終端に達していなければ追加で読み込み
@@ -61,6 +62,23 @@ int main(int argc, char *argv[])
 		}
 	}
 	return EXIT_SUCCESS;
+}
+
+int buffer_next(BUFFER **bf_buffer, unsigned long *next_count)
+{
+	if ((*bf_buffer)->next == NULL) {
+		*next_count = *next_count + 1;
+		// bufferを続きの領域を確保
+		(*bf_buffer)->next = (BUFFER*) malloc(sizeof(BUFFER));
+		(*bf_buffer) = (*bf_buffer)->next;
+		if (source_load((*bf_buffer), sizeof((*bf_buffer)->value), NULL, NULL) < 0) {
+			return -1;
+		}
+	}
+	else {
+		(*bf_buffer) = (*bf_buffer)->next;
+	}
+	return 0;
 }
 
 void check_args(int argc, char *argv[])
@@ -184,15 +202,17 @@ void exit_signal(char sig)
 
 BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 {
-	printf("%c", bf_buffer->value[*index]);
-	fflush(stdout);
+	// jump point
+	// printf("%c", bf_buffer->value[*index]);
+
+	// fflush(stdout);
 	static MEMORY *bf_memory;
 	static short header;
 	static unsigned long loop = 0;
 	unsigned long ii;
 	char input;
 	int start;
-	unsigned start_next_count;
+	unsigned long start_next_count;
 	unsigned long tmp_loop;
 
 	if (bf_memory == NULL) {
@@ -280,12 +300,24 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 				while (bf_memory->cell[header])
 				{
 					loop++;
-					if (start_next_count != 0) {
-						for (ii = start_next_count+1; ii != 0; ii--)
-						{
-							bf_buffer = bf_buffer->next;
-						}
-					}
+
+					// debug
+					// jump point
+					// printf("\x1b[31m'%lu'\x1b[39m", loop);
+					fflush(stdout);
+
+					// if (start_next_count != 0) {
+						// printf("%lu",start_next_count);
+						// fflush(stdout);
+						// for (ii = start_next_count+1; ii != 0; ii--)
+						// {
+						// 	bf_buffer = bf_buffer->next;
+						// }
+					// }
+
+					// debug
+					// printf("\x1b[33m%s\x1b[39m\n", bf_buffer->value);
+
 					*index = code_run_loop(bf_buffer, start, next_count);
 					if (*index == -1) {
 						return ERROR2;
@@ -295,14 +327,34 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 			else {
 				tmp_loop = loop;
 				loop++;
+
+				// jump point
+				// printf("\x1b[31m'%lu'\x1b[39m", loop);
+				// fflush(stdout);
+
 				while (tmp_loop < loop)
 				{
 					*index = *index + 1;
 					if (bf_buffer->value[*index] == '[') {
 						loop++;
+
+						// jump point
+						// printf("\x1b[31m'%lu'\x1b[39m", loop);
+						fflush(stdout);
 					}
 					else if (bf_buffer->value[*index] == ']') {
 						loop--;
+
+						// jump point
+						// printf("\x1b[32m'%lu'\x1b[39m", loop);
+						fflush(stdout);
+					}
+					// buffer終端まで読み込んだときに追加読み込み
+					else if (bf_buffer->value[*index] == '\0') {
+						if (buffer_next(&bf_buffer, next_count) == -1) {
+							return ERROR2;
+						}
+						*index = 0;
 					}
 				}
 			}
@@ -313,18 +365,22 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 				return ERROR1;
 			}
 			loop--;
+
+			// jump point
+			// printf("\x1b[32m'%lu'\x1b[39m", loop);
+			fflush(stdout);
 			return LOOP_END;
 			break;
 		case '!':
 			if (enable_debug) {
-				printf("[dbg]");
+				printf("\x1b[35m[dbg]\x1b[39m");
 				fflush(stdout);
 			}
 			return SKIP;
 			break;
 		case '?':
 			if (enable_debug) {
-				printf("[dbg: memory=%d]", bf_memory->cell[header]);
+				printf("\x1b[35m[dbg: memory=%d]\x1b[39m", bf_memory->cell[header]);
 				fflush(stdout);
 			}
 			return SKIP;
@@ -360,29 +416,27 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index, unsigned long *next_count)
 
 int code_run_loop(BUFFER *bf_buffer, int index, unsigned long *next_count)
 {
+	BF_OPERATOR ret;
 	while (1)
 	{
 		index++;
-
 		// buffer終端まで読み込んだときに追加読み込み
 		if (bf_buffer->value[index] == '\0') {
-			if (bf_buffer->next == NULL) {
-				*next_count = *next_count + 1;
-				// bufferを続きの領域を確保
-				bf_buffer->next = (BUFFER*) malloc(sizeof(BUFFER));
-				bf_buffer = bf_buffer->next;
-				if (source_load(bf_buffer, sizeof(bf_buffer->value), NULL, NULL) < 0) {
-					return -1;
-				}
-			}
-			else {
-				bf_buffer = bf_buffer->next;
+			if (buffer_next(&bf_buffer, next_count) == -1) {
+				return -1;
 			}
 			index = 0;
 		}
 
-		if (code_run(bf_buffer, &index, next_count) == LOOP_END) {
+		ret = code_run(bf_buffer, &index, next_count);
+		if (ret == LOOP_END) {
 			return index;
+		}
+		else if (ret == LOOP_START) {
+			while (bf_buffer->next != NULL)
+			{
+				bf_buffer = bf_buffer->next;
+			}
 		}
 	}
 }
@@ -409,11 +463,13 @@ MEMORY *memory_new(MEMORY *bf_memory, BF_OPERATOR op)
 		bf_memory->next = (MEMORY*) malloc(sizeof(MEMORY));
 		bf_memory->next->prev = bf_memory;
 		bf_memory = bf_memory->next;
+		bf_memory->next = NULL;
 	}
 	else if (op == PREV) {
 		bf_memory->prev = (MEMORY*) malloc(sizeof(MEMORY));
 		bf_memory->prev->next = bf_memory;
 		bf_memory = bf_memory->prev;
+		bf_memory->prev = NULL;
 	}
 	memory_init(bf_memory);
 	return bf_memory;
@@ -456,6 +512,10 @@ int source_load(BUFFER *bf_buffer, int length, FILE *_fp, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	bf_buffer->value[size] = '\0';
+	bf_buffer->next = NULL;
+
+	// jump point
+	// printf("\x1b[36m%s\n\x1b[39m", bf_buffer->value);
 	return 0;
 }
 

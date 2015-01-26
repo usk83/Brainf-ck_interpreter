@@ -13,7 +13,7 @@
 
 // debug
 // #define BUF_LEN 1024
-#define BUF_LEN 50
+#define BUF_LEN 10
 
 typedef unsigned char BYTE;
 
@@ -51,3 +51,4 @@ void exit_signal(char sig);
 int my_getchar(int interval);
 void check_args(int argc, char *argv[]);
 FILE *file_open(char *argv[]);
+int buffer_next(BUFFER **bf_buffer, unsigned long *next_count);
