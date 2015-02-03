@@ -48,3 +48,5 @@ int code_run_loop(BUFFER *bf_buffer, int index);
 void my_termios_init(void);
 void exit_signal(char sig);
 int my_getchar(int interval);
+void my_wait();
+void set_helloworld(MEMORY *bf_memory);

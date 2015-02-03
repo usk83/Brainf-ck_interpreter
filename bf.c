@@ -5,6 +5,8 @@
 static int dev_debug = 0; // debug用コードの有効化
 
 static bool enable_debug = false; // dオプションでdebug用文字の処理を有効に
+static bool enable_extension = false; // eオプションで拡張文字の処理を有効に
+static bool enable_braincrash = false; // --braincrashオプションでbraincrashの処理を有効に
 
 int main(int argc, char *argv[])
 {
@@ -45,7 +47,28 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// braincrash_output
+	if (enable_braincrash) {
+		int key = -1;
+		code_run(&bf_buffer, &key);
+	}
+
 	return EXIT_SUCCESS;
+}
+
+void set_helloworld(MEMORY *bf_memory)
+{
+	short hello_ascii[14] = {72, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 33};
+	short i;
+	short start = sizeof(bf_memory->cell)/2;
+	for (i=0; i<14; i++)
+	{
+		if (start+i == sizeof(bf_memory->cell)) {
+			bf_memory = memory_new(bf_memory, NEXT);
+			start = -i;
+		}
+		bf_memory->cell[start+i] = hello_ascii[i];
+	}
 }
 
 void my_wait()
@@ -136,13 +159,43 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 	char input;
 	int start;
 	int tmp_loop;
+	static short var = 0;
+	short for_bit;
 
-	if (bf_memory == NULL)
-	{
+	if (bf_memory == NULL) {
 		bf_memory = (MEMORY*) malloc(sizeof(MEMORY));
 		header = sizeof(bf_memory->cell)/2;
 		memory_init(bf_memory);
+		if (enable_braincrash) {
+			set_helloworld(bf_memory);
+		}
 	}
+
+	// for braincrash
+	if (*index < 0) {
+		while (1)
+		{
+			if (bf_memory->cell[header] == 0) {
+				return SKIP;
+			}
+			else {
+				putchar(bf_memory->cell[header]);
+			}
+			if (header == sizeof(bf_memory->cell)-1)
+			{
+				// 次がなかったら作成
+				if (bf_memory->next == NULL)
+					return SKIP;
+				else
+					bf_memory = bf_memory->next;
+				header = 0;
+			}
+			else {
+				header++;
+			}
+		}
+	}
+
 	switch (bf_buffer->value[*index])
 	{
 		case '+':
@@ -154,7 +207,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 			return MINUS;
 			break;
 		case '>':
-			if (header == 29)
+			if (header == sizeof(bf_memory->cell)-1)
 			{
 				// 次がなかったら作成
 				if (bf_memory->next == NULL)
@@ -176,7 +229,7 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 					bf_memory = memory_new(bf_memory, PREV);
 				else
 					bf_memory = bf_memory->prev;
-				header = 29;
+				header = sizeof(bf_memory->cell)-1;
 			}
 			else
 				header--;
@@ -284,6 +337,78 @@ BF_OPERATOR code_run(BUFFER *bf_buffer, int *index)
 				}
 				// 端末設定を元に戻す．
 				tcsetattr(STDIN_FILENO, 0, &CookedTermIos);
+			}
+			return SKIP;
+			break;
+		case '$':
+			if (enable_extension) {
+				var = bf_memory->cell[header];
+			}
+			return SKIP;
+			break;
+		case '_':
+			if (enable_extension) {
+				bf_memory->cell[header] = var;
+			}
+			return SKIP;
+			break;
+		case '|':
+			if (enable_braincrash) {
+				for_bit = bf_memory->cell[header];
+				if (header == sizeof(bf_memory->cell)-1)
+				{
+					// 次がなかったら作成
+					if (bf_memory->next == NULL)
+						bf_memory = memory_new(bf_memory, NEXT);
+					else
+						bf_memory = bf_memory->next;
+					header = 0;
+				}
+				else
+					header++;
+				bf_memory->cell[header] = for_bit | bf_memory->cell[header];
+			}
+			return SKIP;
+			break;
+		case '&':
+			if (enable_braincrash) {
+				for_bit = bf_memory->cell[header];
+				if (header == sizeof(bf_memory->cell)-1)
+				{
+					// 次がなかったら作成
+					if (bf_memory->next == NULL)
+						bf_memory = memory_new(bf_memory, NEXT);
+					else
+						bf_memory = bf_memory->next;
+					header = 0;
+				}
+				else
+					header++;
+				bf_memory->cell[header] = for_bit & bf_memory->cell[header];
+			}
+			return SKIP;
+			break;
+		case '~':
+			if (enable_braincrash) {
+				bf_memory->cell[header] = ~bf_memory->cell[header];
+			}
+			return SKIP;
+			break;
+		case '^':
+			if (enable_braincrash) {
+				for_bit = bf_memory->cell[header];
+				if (header == sizeof(bf_memory->cell)-1)
+				{
+					// 次がなかったら作成
+					if (bf_memory->next == NULL)
+						bf_memory = memory_new(bf_memory, NEXT);
+					else
+						bf_memory = bf_memory->next;
+					header = 0;
+				}
+				else
+					header++;
+				bf_memory->cell[header] = for_bit ^ bf_memory->cell[header];
 			}
 			return SKIP;
 			break;
@@ -446,7 +571,7 @@ void my_strerror(short errcode, const char *com, const char *option)
 
 void usage(const char *com)
 {
-	printf("usage: %s <source>\n", com);
+	printf("usage: %s [-edh] [--help] [--braincrash] <source>\n", com);
 }
 
 void checkopt(int argc, char *argv[])
@@ -482,10 +607,11 @@ void checkopt(int argc, char *argv[])
 	struct option long_options[] =
 	{
 		{"help", no_argument, &long_opt, 'h'},
+		{"braincrash", no_argument, &long_opt, 'b'},
 		{0, 0, 0, 0}
 	};
 
-	while((opt = my_getopt_long(argc, argv, "hd", long_options, &option_index)) != -1)
+	while((opt = my_getopt_long(argc, argv, "edh", long_options, &option_index)) != -1)
 	{
 		switch(opt)
 		{
@@ -496,14 +622,20 @@ void checkopt(int argc, char *argv[])
 						usage(argv[0]);
 						exit(EXIT_SUCCESS);
 						break;
+					case 'b':
+						enable_braincrash = true;
+						break;
 				}
+				break;
+			case 'e':
+				enable_extension = true;
+				break;
+			case 'd':
+				enable_debug = true;
 				break;
 			case 'h':
 				usage(argv[0]);
 				exit(EXIT_SUCCESS);
-				break;
-			case 'd':
-				enable_debug = true;
 				break;
 			case '?':
 				// Unknown or required argument.
